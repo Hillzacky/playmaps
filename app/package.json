@@ -1,0 +1,22 @@
+{
+  "name": "playmaps",
+  "version": "0.0.1",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm i",
+    "dev": "nodemon index.js",
+    "start": "node ."
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "^137.0.1",
+    "express": "^5.1.0",
+    "playwright-core": "^1.53.0",
+    "postgres": "^3.4.7",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

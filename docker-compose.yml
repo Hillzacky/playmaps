@@ -1,0 +1,17 @@
+
+services:
+  web:
+    build: .
+    container_name: playmaps
+    ports:
+      - "${SSH_PORT}:22"
+      - "3000:3000"
+      - "80:80"
+      - "443:443"
+    environment:
+      - ROOT_PASSWORD=${ROOT_PASSWORD}
+    command: npm run start
+    volumes:
+      - ./app:/app
+    restart: unless-stopped
+
