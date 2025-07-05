@@ -6,17 +6,15 @@ import os from 'os';
 import path from 'path';
 import { EventEmitter } from 'events';
 
-// Set higher limit for EventEmitter to prevent memory warnings
 EventEmitter.defaultMaxListeners = 30;
 
-// Keep track of temp directories to clean up on exit
 const tempDirectories = [];
+const useWs = process.env.USE_WS ?? false;
+const wp = process.env.BROWSER_EXECUTABLE_PATH;
+const xp = await chromium.executablePath();
 
-// Clean up function for handling exit
 async function cleanupResources() {
   console.log('Cleaning up resources...');
-  
-  // Clean up temporary directories
   for (const dir of tempDirectories) {
     try {
       await fs.rm(dir, { recursive: true, force: true });
@@ -27,10 +25,8 @@ async function cleanupResources() {
   }
 }
 
-// Register cleanup handlers
 process.on('exit', () => {
   console.log('Process exit detected, cleaning up...');
-  // Use sync operations since we're in exit handler
   for (const dir of tempDirectories) {
     try {
       fsSync.rmSync(dir, { recursive: true, force: true });
@@ -40,7 +36,6 @@ process.on('exit', () => {
   }
 });
 
-// Handle other termination signals
 ['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach(signal => {
   process.on(signal, async () => {
     console.log(`Received ${signal}, cleaning up before exit...`);
@@ -49,7 +44,6 @@ process.on('exit', () => {
   });
 });
 
-// Handle uncaught exceptions
 process.on('uncaughtException', async (error) => {
   console.error('Uncaught exception:', error);
   await cleanupResources();
@@ -68,18 +62,15 @@ async function openBrowser(options = {}) {
     ignoreDefaultArgs: false
   };
 
-  // Universal Linux (selain Ubuntu)
   const isLinux = platform === 'linux';
-  // Ubuntu biasanya terdeteksi sebagai 'linux', jadi kita cek env
   const isUbuntu = isLinux && (process.env.XDG_CURRENT_DESKTOP?.toLowerCase().includes('ubuntu') || process.env.DESKTOP_SESSION?.toLowerCase().includes('ubuntu'));
   const isMac = platform === 'darwin';
   const isWin = platform === 'win32';
 
   if (isWin) {
-    // Windows
     launchOptions = {
       ...launchOptions,
-      channel: 'chrome', // gunakan Chrome jika ada
+      channel: 'chrome',
       args: [
         ...launchOptions.args,
         '--disable-accelerated-2d-canvas',
@@ -89,7 +80,6 @@ async function openBrowser(options = {}) {
       ]
     };
   } else if (isMac) {
-    // macOS
     launchOptions = {
       ...launchOptions,
       channel: 'chrome',
@@ -103,7 +93,6 @@ async function openBrowser(options = {}) {
       ]
     };
   } else if (isUbuntu) {
-    // Ubuntu
     launchOptions = {
       ...launchOptions,
       args: [
@@ -115,7 +104,6 @@ async function openBrowser(options = {}) {
       ]
     };
   } else if (isLinux) {
-    // Universal Linux (selain Ubuntu)
     launchOptions = {
       ...launchOptions,
       args: [
@@ -128,15 +116,13 @@ async function openBrowser(options = {}) {
     };
   }
 
-  // Jika ada opsi executablePath dari sparticuz/chromium, tambahkan
-  if (!isMac && !isWin) {
-    const executablePath = await chromium.executablePath();
-    launchOptions.executablePath = executablePath;
-  }
+  launchOptions.executablePath = useWs ? wp : xp;
 
-  // console.log('browser options:', JSON.stringify(launchOptions, null, 2));
+  // console.log('config:', JSON.stringify(launchOptions, null, 2));
   try {
-    browser = await playwright.chromium.launch(launchOptions);
+    browser = useWs ?
+    await playwright.connectOverCDP(launchOptions);
+    : await playwright.chromium.launch(launchOptions);
     console.log('Browser launched successfully');
   } catch (err) {
     console.error('Browser launch failed:', err.message);
@@ -151,16 +137,11 @@ async function closeBrowser(browser) {
       console.warn('Browser instance is null or undefined. Nothing to close.');
       return;
     }
-    
     await browser.close();
     console.log('Browser closed.');
-    
-    // Trigger cleanup of temporary directories
     await cleanupResources();
-    
   } catch (error) {
     console.error('Error closing browser:', error);
-    // Still try to clean up resources even if browser close fails
     try {
       await cleanupResources();
     } catch (cleanupError) {
@@ -199,13 +180,10 @@ async function waitForScrollFeed(page, maxScroll = 10) {
   while (previousHeight !== currentHeight && attemptCount < maxScrollAttempts) {
     previousHeight = currentHeight;
     
-    // Scroll ke bawah
     await scroll(page, "[role='feed']");
     
-    // Tunggu content baru dimuat
     await page.waitForTimeout(2500 * (attemptCount + 1 / 2));
     
-    // Dapatkan tinggi baru
     currentHeight = await page.evaluate(() => {
       const feed = document.querySelector("[role='feed']");
       return feed ? feed.scrollHeight : 0;
@@ -237,7 +215,6 @@ async function qsAll(page, selector) {
     throw error;
   }
 }
-
 
 async function getClassName(page, className) {
   try {
@@ -328,7 +305,7 @@ async function loadState(page, state = 'load', options = {}) {
 }
 async function waitNetwork(page, options = {}) {
   try {
-    const defaultOptions = { timeout: 5000, idleTime: 500 }; // Default timeout 5 detik, idleTime 500ms
+    const defaultOptions = { timeout: 5000, idleTime: 500 };
     const mergedOptions = { ...defaultOptions, ...options };
     await page.waitForNetworkIdle(mergedOptions);
     return true;
@@ -367,18 +344,12 @@ async function run() {
   const content = await getHtml(page, '#myDiv');
   console.log('Content:', content);
   
-  // Contoh penggunaan waitForSelector
-  await waitSelector(page, '#myElement', {timeout: 10000}); // Menunggu sampai 10 detik
+  await waitSelector(page, '#myElement', {timeout: 10000});
   const elementText = await getText(page, '#myElement');
   console.log("Text from #myElement:", elementText);
 
-  // Contoh penggunaan waitForLoadState
-  await loadState(page, 'networkidle'); // Menunggu sampai network idle
-
-  // Contoh penggunaan waitForNetworkIdle
-  await waitNetwork(page, { idleTime: 1000 }); // Menunggu 1 detik sampai network idle
-
-
+  await loadState(page, 'networkidle');
+  await waitNetwork(page, { idleTime: 1000 });
   await closeBrowser(browser);
 }
 
