@@ -128,6 +128,8 @@ async function openBrowser(options = {}) {
     console.error('Browser launch failed:', err.message);
     throw err;
   }
+  browser.on('disconnected',()=>console.warn('Disconnect'));
+  browser.on('error',(err)=>console.error(err));
   return browser;
 }
 
