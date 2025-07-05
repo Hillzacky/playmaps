@@ -156,16 +156,11 @@ async function closeBrowser(browser) {
       console.warn('Browser instance is null or undefined. Nothing to close.');
       return;
     }
-
     await browser.close();
-    console.log('Browser closed.');
-
-    // Trigger cleanup of temporary directories
+    console.info('Browser closed.');
     await cleanupResources();
-
   } catch (error) {
     console.error('Error closing browser:', error);
-    // Still try to clean up resources even if browser close fails
     try {
       await cleanupResources();
     } catch (cleanupError) {
@@ -198,19 +193,15 @@ async function scroll(page, selector) {
 async function waitForScrollFeed(page, maxScroll = 10) {
   let previousHeight;
   let currentHeight = 0;
-  const maxScrollAttempts = maxScroll; // Batasi jumlah scroll
+  const maxScrollAttempts = maxScroll;
   let attemptCount = 0;
 
   while (previousHeight !== currentHeight && attemptCount < maxScrollAttempts) {
     previousHeight = currentHeight;
 
-    // Scroll ke bawah
     await scroll(page, "[role='feed']");
-
-    // Tunggu content baru dimuat
     await page.waitForTimeout(2500 * (attemptCount + 1 / 2));
 
-    // Dapatkan tinggi baru
     currentHeight = await page.evaluate(() => {
       const feed = document.querySelector("[role='feed']");
       return feed ? feed.scrollHeight : 0;
@@ -304,7 +295,7 @@ async function getHtml(page, selector) {
 
 async function waitSelector(page, selector, options = {}) {
   try {
-    const defaultOptions = { timeout: 5000, state: 'attached' }; // Default timeout 5 detik, state 'attached'
+    const defaultOptions = { timeout: 5000, state: 'attached' };
     const mergedOptions = { ...defaultOptions, ...options };
     await page.waitForSelector(selector, mergedOptions);
     return true;
@@ -319,7 +310,7 @@ async function waitSelector(page, selector, options = {}) {
 
 async function loadState(page, state = 'load', options = {}) {
   try {
-    const defaultOptions = { timeout: 30000 }; // Increase default timeout to 30 seconds
+    const defaultOptions = { timeout: 30000 };
     const mergedOptions = {...defaultOptions, ...options};
     await page.waitForLoadState(state, mergedOptions);
     return true;
@@ -333,7 +324,7 @@ async function loadState(page, state = 'load', options = {}) {
 }
 async function waitNetwork(page, options = {}) {
   try {
-    const defaultOptions = { timeout: 5000, idleTime: 500 }; // Default timeout 5 detik, idleTime 500ms
+    const defaultOptions = { timeout: 5000, idleTime: 500 };
     const mergedOptions = { ...defaultOptions, ...options };
     await page.waitForNetworkIdle(mergedOptions);
     return true;
@@ -372,15 +363,12 @@ async function run() {
   const content = await getHtml(page, '#myDiv');
   console.log('Content:', content);
 
-  // Contoh penggunaan waitForSelector
   await waitSelector(page, '#myElement', {timeout: 10000}); // Menunggu sampai 10 detik
   const elementText = await getText(page, '#myElement');
   console.log("Text from #myElement:", elementText);
 
-  // Contoh penggunaan waitForLoadState
   await loadState(page, 'networkidle'); // Menunggu sampai network idle
 
-  // Contoh penggunaan waitForNetworkIdle
   await waitNetwork(page, { idleTime: 1000 }); // Menunggu 1 detik sampai network idle
 
 
