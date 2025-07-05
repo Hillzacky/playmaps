@@ -174,7 +174,7 @@ async function scroll(page, selector) {
 async function waitForScrollFeed(page, maxScroll = 10) {
   let previousHeight;
   let currentHeight = 0;
-  const maxScrollAttempts = maxScroll; // Batasi jumlah scroll
+  const maxScrollAttempts = maxScroll;
   let attemptCount = 0;
 
   while (previousHeight !== currentHeight && attemptCount < maxScrollAttempts) {
@@ -276,7 +276,7 @@ async function getHtml(page, selector) {
 
 async function waitSelector(page, selector, options = {}) {
   try {
-    const defaultOptions = { timeout: 5000, state: 'attached' }; // Default timeout 5 detik, state 'attached'
+    const defaultOptions = { timeout: 5000, state: 'attached' };
     const mergedOptions = { ...defaultOptions, ...options };
     await page.waitForSelector(selector, mergedOptions);
     return true;
@@ -291,7 +291,7 @@ async function waitSelector(page, selector, options = {}) {
 
 async function loadState(page, state = 'load', options = {}) {
   try {
-    const defaultOptions = { timeout: 30000 }; // Increase default timeout to 30 seconds
+    const defaultOptions = { timeout: 30000 };
     const mergedOptions = {...defaultOptions, ...options};
     await page.waitForLoadState(state, mergedOptions);
     return true;
