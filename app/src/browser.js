@@ -6,17 +6,15 @@ import os from 'os';
 import path from 'path';
 import { EventEmitter } from 'events';
 
-// Set higher limit for EventEmitter to prevent memory warnings
 EventEmitter.defaultMaxListeners = 30;
 
-// Keep track of temp directories to clean up on exit
 const tempDirectories = [];
+const useWs = process.env.USE_WS ?? false;
+const wp = process.env.BROWSER_EXECUTABLE_PATH;
+const xp = await chromium.executablePath();
 
-// Clean up function for handling exit
 async function cleanupResources() {
   console.log('Cleaning up resources...');
-
-  // Clean up temporary directories
   for (const dir of tempDirectories) {
     try {
       await fs.rm(dir, { recursive: true, force: true });
@@ -27,10 +25,8 @@ async function cleanupResources() {
   }
 }
 
-// Register cleanup handlers
 process.on('exit', () => {
   console.log('Process exit detected, cleaning up...');
-  // Use sync operations since we're in exit handler
   for (const dir of tempDirectories) {
     try {
       fsSync.rmSync(dir, { recursive: true, force: true });
@@ -40,7 +36,6 @@ process.on('exit', () => {
   }
 });
 
-// Handle other termination signals
 ['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach(signal => {
   process.on(signal, async () => {
     console.log(`Received ${signal}, cleaning up before exit...`);
@@ -49,7 +44,6 @@ process.on('exit', () => {
   });
 });
 
-// Handle uncaught exceptions
 process.on('uncaughtException', async (error) => {
   console.error('Uncaught exception:', error);
   await cleanupResources();
@@ -65,22 +59,18 @@ async function openBrowser(options = {}) {
       '--no-sandbox',
       '--disable-setuid-sandbox'
     ],
-    // executablePath: await chromium.executablePath("https://github.com/Sparticuz/chromium/releases/download/v137.0.1/chromium-v137.0.1-pack.x64.tar"),
     ignoreDefaultArgs: false
   };
 
-  // Universal Linux (selain Ubuntu)
   const isLinux = platform === 'linux';
-  // Ubuntu biasanya terdeteksi sebagai 'linux', jadi kita cek env
   const isUbuntu = isLinux && (process.env.XDG_CURRENT_DESKTOP?.toLowerCase().includes('ubuntu') || process.env.DESKTOP_SESSION?.toLowerCase().includes('ubuntu'));
   const isMac = platform === 'darwin';
   const isWin = platform === 'win32';
 
   if (isWin) {
-    // Windows
     launchOptions = {
       ...launchOptions,
-      channel: 'chrome', // gunakan Chrome jika ada
+      channel: 'chrome',
       args: [
         ...launchOptions.args,
         '--disable-accelerated-2d-canvas',
@@ -90,7 +80,6 @@ async function openBrowser(options = {}) {
       ]
     };
   } else if (isMac) {
-    // macOS
     launchOptions = {
       ...launchOptions,
       channel: 'chrome',
@@ -104,7 +93,6 @@ async function openBrowser(options = {}) {
       ]
     };
   } else if (isUbuntu) {
-    // Ubuntu
     launchOptions = {
       ...launchOptions,
       args: [
@@ -116,7 +104,6 @@ async function openBrowser(options = {}) {
       ]
     };
   } else if (isLinux) {
-    // Universal Linux (selain Ubuntu)
     launchOptions = {
       ...launchOptions,
       args: [
@@ -129,24 +116,20 @@ async function openBrowser(options = {}) {
     };
   }
 
-  // Jika ada opsi executablePath dari sparticuz/chromium, tambahkan
-  if (!isMac && !isWin) {
-    const executablePath = await chromium.executablePath();
-    launchOptions.executablePath = executablePath;
-  }
+  launchOptions.executablePath = useWs ? wp : xp;
 
-  // console.log('browser options:', JSON.stringify(launchOptions, null, 2));
+  // console.log('config:', JSON.stringify(launchOptions, null, 2));
   try {
-    chromium.setGraphicsMode = false;
-    await chromium.font(
-      "https://raw.githack.com/googlei18n/noto-emoji/master/fonts/NotoColorEmoji.ttf"
-    );
-    browser = await playwright.chromium.launch(launchOptions);
-    console.log('Browser launched');
+    browser = useWs ?
+    await playwright.connectOverCDP(launchOptions);
+    : await playwright.chromium.launch(launchOptions);
+    console.log('Browser launched successfully');
   } catch (err) {
     console.error('Browser launch failed:', err.message);
     throw err;
   }
+  browser.on('disconnected',()=>console.warn('Disconnect'));
+  browser.on('error',(err)=>console.error(err));
   return browser;
 }
 
@@ -157,7 +140,7 @@ async function closeBrowser(browser) {
       return;
     }
     await browser.close();
-    console.info('Browser closed.');
+    console.log('Browser closed.');
     await cleanupResources();
   } catch (error) {
     console.error('Error closing browser:', error);
@@ -172,7 +155,7 @@ async function closeBrowser(browser) {
 
 async function scroll(page, selector) {
   try {
-    await page.waitForSelector(selector, { timeout: 2800, state: 'attached' });
+    await page.waitForSelector(selector, { timeout: 1500, state: 'attached' });
     await page.evaluate(async(selector) => {
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       const element = document.querySelector(selector);
@@ -200,6 +183,7 @@ async function waitForScrollFeed(page, maxScroll = 10) {
     previousHeight = currentHeight;
 
     await scroll(page, "[role='feed']");
+
     await page.waitForTimeout(2500 * (attemptCount + 1 / 2));
 
     currentHeight = await page.evaluate(() => {
@@ -233,7 +217,6 @@ async function qsAll(page, selector) {
     throw error;
   }
 }
-
 
 async function getClassName(page, className) {
   try {
@@ -363,15 +346,12 @@ async function run() {
   const content = await getHtml(page, '#myDiv');
   console.log('Content:', content);
 
-  await waitSelector(page, '#myElement', {timeout: 10000}); // Menunggu sampai 10 detik
+  await waitSelector(page, '#myElement', {timeout: 10000});
   const elementText = await getText(page, '#myElement');
   console.log("Text from #myElement:", elementText);
 
-  await loadState(page, 'networkidle'); // Menunggu sampai network idle
-
-  await waitNetwork(page, { idleTime: 1000 }); // Menunggu 1 detik sampai network idle
-
-
+  await loadState(page, 'networkidle');
+  await waitNetwork(page, { idleTime: 1000 });
   await closeBrowser(browser);
 }
 
