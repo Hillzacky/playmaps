@@ -9,7 +9,7 @@ import { EventEmitter } from 'events';
 EventEmitter.defaultMaxListeners = 30;
 
 const tempDirectories = [];
-const useWs = process.env.USE_WS ?? false;
+const useWs = process.env.USE_WS ?? FALSE;
 const wp = process.env.BROWSER_EXECUTABLE_PATH;
 const xp = await chromium.executablePath();
 
@@ -116,13 +116,15 @@ async function openBrowser(options = {}) {
     };
   }
 
-  launchOptions.executablePath = useWs ? wp : xp;
-
   // console.log('config:', JSON.stringify(launchOptions, null, 2));
   try {
-    browser = useWs ?
-    await playwright.connectOverCDP(launchOptions);
-    : await playwright.chromium.launch(launchOptions);
+    if (!useWs) {
+      launchOptions.executablePath = xp;
+      browser = await playwright.chromium.launch(launchOptions);
+    } else {
+      launchOptions.wsEndpoint = wp;
+      browser = await playwright.chromium.connectOverCDP(launchOptions);
+    }
     console.log('Browser launched successfully');
   } catch (err) {
     console.error('Browser launch failed:', err.message);

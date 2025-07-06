@@ -38,4 +38,6 @@ async function setDB({ name, address, phone }) {
   return m
 }
 
+// (async()=>{ await setDB({"name": "test","address": "test","phone": "test"}) })()
+
 export { up, getDB, setDB }

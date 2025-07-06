@@ -17,7 +17,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/', router);
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).send('500: ', err);
+  res.status(500).send({ "status": 500, "error": err});
 });
 
 app.listen(port, () => {

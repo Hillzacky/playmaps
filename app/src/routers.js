@@ -5,6 +5,11 @@ import { Router } from 'express';
 import { getData, getMultipleData } from './maps.js';
 const router = Router();
 
+router.get('/', (req, res) => {
+  const title = req.app.locals.siteTitle;
+  res.send(title, res.status());
+});
+
 router.get('/single', (req, res) => {
   try {
   const { find = 'Toko', mylonglat = '@-6.9351394,106.9323303,13z' } = req.query;
@@ -46,9 +51,5 @@ router.get('/bulk', (req, res) => {
   }
 });
 
-router.get('/', (req, res) => {
-  const title = req.app.locals.siteTitle;
-  res.send(title, res.status());
-});
 
 export default router
