@@ -7,7 +7,8 @@
   "scripts": {
     "build": "npm i",
     "dev": "nodemon index.js",
-    "start": "node ."
+    "start": "node .",
+    "test": "npx playwright test"
   },
   "dependencies": {
     "@sparticuz/chromium": "^137.0.1",
@@ -17,6 +18,7 @@
     "postgres": "^3.4.7"
   },
   "devDependencies": {
+    "playwright": "^1.36.0",
     "nodemon": "^3.0.1"
   }
 }
