@@ -31,7 +31,7 @@ jobs:
         run: npm install
 
       - name: Install Playwright browsers
-        run: npx playwright install
+        run: npx playwright install ${{ github.event.inputs.browser }}
 
       - name: Run Playwright tests
         run: npm run test
