@@ -1,4 +1,4 @@
-import { getData, getMultipleData } from '../src/maps.js';
+// import { getData, getMultipleData } from '../src/maps.js';
 import { test, expect } from '@playwright/test';
 
 test('homepage has title', async ({ page }) => {
