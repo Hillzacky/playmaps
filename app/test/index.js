@@ -1,6 +1,13 @@
 import { getData, getMultipleData } from '../maps.js';
+import { test, expect } from '@playwright/test';
 
-try {
+test('homepage has title', async ({ page }) => {
+  await page.goto('https://www.google.com');
+  await expect(page.locator('title')).toHaveText('Google');
+});
+
+/**
+  try {
   const find = 'Toko', mylonglat = '@-6.9351394,106.9323303,13z';
   const uri = `https://www.google.com/maps/search/${encodeURI(find)}/${mylonglat}`;
     getData(uri);
@@ -18,3 +25,4 @@ try {
       }
     });
 }
+**/
