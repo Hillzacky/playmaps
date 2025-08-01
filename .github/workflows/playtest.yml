@@ -11,14 +11,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        working-directory: ./app
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
-
-      - name: Change working directory
-        working-directory: ./app
 
       - name: Install dependencies
         run: npm install
